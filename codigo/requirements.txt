@@ -1,0 +1,9 @@
+requests
+langchain
+langchain_experimental
+langchain_openai
+langchain-elasticsearch
+langchain_community
+google-cloud-bigquery-storage
+google-cloud-storage
+pandas
