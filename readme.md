@@ -33,6 +33,19 @@ El modelo utilizado es `gpt-4.1-2025-04-14`, integrado en un agente ReAct (`crea
 
 ---
 
+## 🗺️ Arquitectura
+
+![Arquitectura](arquitectura.jpg)
+
+1. **Usuario** interactúa desde su aplicacion de whatsapp.
+2. **Meta** Mediante el API nativa de Meta captura el mensaje.  
+3. **Cloud Run** recibe `/webhook?` por POST y activa LangChain.  
+4. El **agente** consulta → Elasticsearch (conocimiento) + PostgreSQL (memoria).  
+5. GPT‑4.1 genera la respuesta; LangSmith traza cada paso.  
+6. La respuesta JSON la formatea y retorna a whatsapp.
+
+---
+
 ## 🔧 Tecnologías Utilizadas
 
 - **LangChain**: Orquestador del agente y herramientas.
