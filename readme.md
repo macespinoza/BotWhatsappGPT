@@ -1,87 +1,150 @@
-# BotWhatsappGPT
+# 🤖 Agente de WhatsApp con LangChain + GPT-4.1
 
-Este repositorio contiene una solución integral para crear un bot de WhatsApp utilizando LangChain, Google Cloud, y otras tecnologías clave. A continuación, se detallan los componentes del repositorio y las instrucciones para su correcta configuración.
+Este repositorio contiene una implementación completa de un agente conversacional desplegable en **Google Cloud Run**, capaz de interactuar con usuarios a través de **WhatsApp**, utilizando **GPT-4.1**, memoria persistente con **PostgreSQL**, recuperación de contexto con **ElasticSearch** y un flujo conversacional basado en el patrón **ReAct** de LangChain.
 
-## Estructura del Repositorio
+---
 
-### Código
-- **`main.py`**: Código fuente completo de la solución integrada, diseñado para ejecutarse en **Google Cloud Function**.
-- **`requirements.txt`**: Lista de librerías necesarias para la aplicación.
+## 📂 Estructura del Proyecto
 
-### JSON
-- **`EjemplohistorialResumen.json`**: Ejemplo de cómo se está guardando actualmente el historial de conversaciones en **Google Cloud Storage**.
-- **`EjemploHistoricoGPT.json`**: Ejemplo de datos completos del historial utilizado por el bot. Se han eliminado ciertos campos para reducir costos de tokens.
-- **`notificacionWebhook.json`**: Ejemplo de la estructura JSON de retorno que **Meta** envía al Webhook configurado.
+```
+.
+├── code/
+│   ├── app.py               # Lógica del agente y servidor Flask
+│   ├── Dockerfile           # Imagen Docker para Cloud Run
+│   ├── requirements.txt     # Dependencias del entorno
+├── Notebook Agent whatsapp.ipynb  # Notebook explicativo del agente
+├── old_version_2024/        # Primera versión con cadenas LangChain y memoria en Cloud Storage
+```
 
-### Otros
-- **`EjemploConversacion.jpg`**: Imagen que ejemplifica una conversación simple con el modelo GPT.
-- **`productos.csv`**: Lista de productos cargados a **ElasticSearch** para la búsqueda y consulta.
+---
 
-## Nivel de Conocimiento Requerido
+## 🧠 Descripción del Agente
 
-Para implementar y comprender completamente esta solución, se recomienda tener un nivel de conocimiento intermedio en las siguientes tecnologías:
+El agente está diseñado para asistir en ventas de computadoras y productos tecnológicos, guiando al usuario por un flujo natural de conversación:
 
-- **Python**: Intermedio
-- **LangChain**: Intermedio
-- **ElasticSearch**: Básico
-- **Google Cloud**: Intermedio
-- **Meta (Plataforma WhatsApp)**: Básico
+1. Saludo y exploración de necesidades.
+2. Consulta de productos (usando recuperación semántica desde ElasticSearch).
+3. Opciones de entrega (tienda o domicilio).
+4. Confirmación del pedido.
+5. Método de pago.
+6. Cierre de la compra con instrucciones de pago o código de recogida.
 
-## Configuración de Variables
+El modelo utilizado es `gpt-4.1-2025-04-14`, integrado en un agente ReAct (`create_react_agent`) de LangChain, que usa herramientas y memoria por sesión vía `thread_id`.
 
-En el archivo **`main.py`**, es necesario reemplazar las siguientes variables con sus propios valores para garantizar el correcto funcionamiento de la aplicación:
+---
 
-- **API de OpenAI para GPT**:  
-  `apikey = "sk-************************************"`
-  
-- **Nombre del Cloud Storage para almacenar el historial**:  
-  `cstorage = "nombre-cloud-storage"`
+## 🔧 Tecnologías Utilizadas
 
-- **Datos de token de la plataforma Meta**:  
-  `tokenmeta = "nombre-webhook-token"`  
-  `whatsapp_token = "EA*************************************"`
+- **LangChain**: Orquestador del agente y herramientas.
+- **GPT-4.1**: Modelo base para generar respuestas.
+- **LangGraph**: Framework de flujos de agente y memoria persistente.
+- **PostgreSQL**: Almacenamiento de memoria por sesión (`PostgresSaver`).
+- **ElasticSearch**: Base de datos vectorial para recuperación de productos.
+- **Flask**: API que sirve de webhook para WhatsApp.
+- **Docker**: Contenedor listo para despliegue en Google Cloud Run.
 
-- **URL de la API de Meta WhatsApp para envío de mensajes**:  
-  `whatsapp_url = "https://graph.facebook.com/v20.0/***************/messages"`
+---
 
-- **Credenciales de ElasticSearch para almacenar productos vía pipeline**:  
-  `webip = "http://**.**.**.**:9200"`  
-  `usuario = "elastic"`  
-  `password = "**********"`  
-  `indexname = "*********"`
+## 🚀 Despliegue en Cloud Run
 
-- **Tamaño máximo del historial**:  
-  `longitudtoken = 10000`  
-  > El tamaño máximo que puede tener el historial; si crece más de este límite, no se guardará más historial.
+1. Clonar el repositorio:
 
-## Configuración de Cloud Storage
+   ```bash
+   git clone https://github.com/tu_usuario/whatsapp-agent
+   cd whatsapp-agent/code
+   ```
 
-Es recomendable establecer un ciclo de vida en **Google Cloud Storage** para que los archivos se almacenen solo por un tiempo determinado. Esto permite que, si un usuario regresa después de un año, no se mantenga innecesariamente su información almacenada, lo cual es una decisión relativa al negocio.
+2. Construir y subir la imagen:
 
-## Cálculo de Costos
+   ```bash
+   gcloud builds submit --tag gcr.io/tu-proyecto/whatsapp-agent
+   ```
 
-### Costo de GPT-5 Usado para esta Solución
+3. Desplegar en Cloud Run:
 
-- **$0.003000** por cada **1K tokens de entrada**
-- **$0.001500** por cada **1K tokens de salida**
+   ```bash
+   gcloud run deploy whatsapp-agent \
+     --image gcr.io/tu-proyecto/whatsapp-agent \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --port 8080
+   ```
 
-### Ejemplo de Consumo de Tokens
+---
 
-Cada interacción acumula el historial de las interacciones previas, lo que incrementa el número de tokens utilizados:
+## 📩 Conexión con WhatsApp
 
-1. **Primera Interacción**: 189 tokens  
-2. **Segunda Interacción**: 189 + 339 = 528 tokens  
-3. **Tercera Interacción**: 189 + 339 + 454 = 982 tokens  
-4. **Cuarta Interacción**: 189 + 339 + 454 + 432 = 1,414 tokens  
-5. **Quinta Interacción**: 189 + 339 + 454 + 432 + 533 = 1,947 tokens  
-6. **Sexta Interacción**: 189 + 339 + 454 + 432 + 533 + 305 = 2,252 tokens  
-7. **Séptima Interacción**: 189 + 339 + 454 + 432 + 533 + 305 + 331 = 2,583 tokens  
-8. **Octava Interacción**: 189 + 339 + 454 + 432 + 533 + 305 + 331 + 449 = 3,032 tokens  
+Este proyecto está preparado para funcionar con la **API oficial de WhatsApp Business** (Meta):
 
-**Total de Tokens Gastados**: 12,927  
-**Costo Aproximado**: $0.036 dólares
+- El endpoint `/webhook` recibe los mensajes entrantes (GET para validación, POST para eventos).
+- Responde automáticamente usando el agente configurado y envía respuestas al número correspondiente.
+- Requiere un `token` y `webhook_url` que se configuran en el código (usa variables de entorno en producción).
 
-## Desarrollado por
+---
 
-**MAC**: Miguel Angel Cotrina
-**Linkedin**: https://www.linkedin.com/in/mcotrina/
+## 🔐 Variables de Entorno (sugeridas)
+
+Para producción, reemplaza los valores sensibles en `app.py` por variables de entorno:
+
+```bash
+OPENAI_API_KEY=
+WHATSAPP_TOKEN=
+WHATSAPP_URL=
+POSTGRES_URL=
+ELASTIC_PASSWORD=
+TOKENMETA=
+```
+
+---
+
+## 📓 Notebook de Explicación
+
+En la raíz encontrarás el notebook `Notebook Agent whatsapp.ipynb` con una explicación paso a paso del funcionamiento del agente, ideal para comprender la lógica detrás del flujo y probar localmente.
+
+---
+
+## 🧪 Requisitos
+
+Archivo `requirements.txt` con todas las dependencias necesarias:
+
+```txt
+Flask==2.0.1
+gunicorn==20.1.0
+psycopg[binary,pool]==3.2.6
+werkzeug==2.0.3
+langchain-openai
+langchain_core
+langgraph
+langgraph-checkpoint-postgres
+langchain
+langchain-community
+elasticsearch
+langchain-elasticsearch
+```
+
+---
+
+
+## 🌍 Comunidad y Contribuciones
+
+![GitHub repo views](https://komarev.com/ghpvc/?username=macespinoza&repo=BotWhatsappGPT&color=blue&style=flat)
+
+Este proyecto es de **código abierto** y nació con el propósito de compartir, aprender y construir en comunidad.  
+Si tienes ideas, mejoras o simplemente quieres sumarte, ¡las contribuciones están más que bienvenidas! 🙌
+
+[![Star](https://img.shields.io/github/stars/macespinoza/BotWhatsappGPT?style=social)](https://github.com/macespinoza/BotWhatsappGPT/stargazers)
+[![Fork](https://img.shields.io/github/forks/macespinoza/BotWhatsappGPT?style=social)](https://github.com/macespinoza/BotWhatsappGPT/fork)
+
+> Puedes abrir un Pull Request o crear un Issue si quieres proponer mejoras o reportar errores.  
+
+---
+
+## 🤝 Conecta conmigo
+
+Gracias por revisar este repositorio.  
+Si te interesa colaborar, aprender más o invitarme a dar una charla, puedes escribirme o seguirme en LinkedIn:
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Miguel%20Cotrina-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/mcotrina/)
+
+> IA & Data con propósito
